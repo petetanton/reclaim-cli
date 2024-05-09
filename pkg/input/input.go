@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
+	sterm "github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/sirupsen/logrus"
 	terminal "golang.org/x/term"
-	"gopkg.in/AlecAivazis/survey.v1"
-	sterm "gopkg.in/AlecAivazis/survey.v1/terminal"
 )
 
 var tries = 0
