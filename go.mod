@@ -3,10 +3,10 @@ module github.com/petetanton/reclaim-cli
 go 1.22.1
 
 require (
+	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.27.2
 	golang.org/x/term v0.20.0
-	gopkg.in/AlecAivazis/survey.v2 v2.3.7
 )
 
 require (
@@ -18,4 +18,5 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 )
