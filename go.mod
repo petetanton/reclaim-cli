@@ -6,7 +6,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.27.2
 	golang.org/x/term v0.20.0
-	gopkg.in/AlecAivazis/survey.v1 v1.8.8
+	gopkg.in/AlecAivazis/survey.v2 v2.3.7
 )
 
 require (
