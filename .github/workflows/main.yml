@@ -15,5 +15,12 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.22
+      - name: go mod
+        run: go mod tidy
+      - name: commit docs
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Update go mod
+          file_pattern: 'go.*'
       - name: Build
         run: go build main.go
