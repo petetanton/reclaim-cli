@@ -18,7 +18,7 @@ jobs:
       - name: go mod
         run: go mod tidy
       - name: commit mod and sum
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: Update go mod
           file_pattern: 'go.*'
