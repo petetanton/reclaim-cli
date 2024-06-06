@@ -29,4 +29,4 @@ release:
     name: "reclaim-cli"
   draft: false
 changelog:
-  disable: true
+  disable: false
