@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/petetanton/reclaim-cli/pkg"
 	"github.com/petetanton/reclaim-cli/pkg/input"
 	"github.com/petetanton/reclaim-cli/pkg/reclaim"
 	"github.com/sirupsen/logrus"
@@ -36,6 +37,13 @@ func main() {
 					return err
 				}
 				logrus.Printf("task %s created", title)
+				return nil
+			},
+		},
+		{
+			Name: "version",
+			Action: func(c *cli.Context) error {
+				logrus.Print(pkg.Version)
 				return nil
 			},
 		},
