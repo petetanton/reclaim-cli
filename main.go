@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/petetanton/reclaim-cli/pkg"
 	"github.com/petetanton/reclaim-cli/pkg/input"
 	"github.com/petetanton/reclaim-cli/pkg/reclaim"
+	"github.com/petetanton/reclaim-cli/pkg/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"os"
@@ -43,7 +43,7 @@ func main() {
 		{
 			Name: "version",
 			Action: func(c *cli.Context) error {
-				logrus.Print(pkg.Version)
+				logrus.Print(version.Version)
 				return nil
 			},
 		},

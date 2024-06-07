@@ -1,3 +1,3 @@
-package main
+package version
 
 const Version = "main"
