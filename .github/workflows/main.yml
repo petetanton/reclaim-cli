@@ -24,7 +24,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: Update version.go
-          file_pattern: 'pkg/version.go'
+          file_pattern: 'pkg/version/version.go'
       - name: go mod
         run: go mod tidy
       - name: commit mod and sum
