@@ -1,1 +1,3 @@
-package pkg
+package main
+
+const Version = "main"
