@@ -4,9 +4,6 @@ on:
     tags:
       - 'v*'
 jobs:
-  create-version:
-    runs-on: ubuntu-latest
-
   goreleaser:
     runs-on: ubuntu-latest
     steps:
