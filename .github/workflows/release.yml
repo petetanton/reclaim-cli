@@ -18,7 +18,7 @@ jobs:
         run: |
           echo "package main" > pkg/version.go
           echo "" >> pkg/version.go
-          echo "const Version = \"${{ github.ref_name }}\" >> pkg/version.go
+          echo "const Version = \"${{ github.ref_name }}\"" >> pkg/version.go
       -
         name: commit version
         uses: stefanzweifel/git-auto-commit-action@v5
