@@ -25,6 +25,7 @@ jobs:
         with:
           commit_message: Update version.go
           file_pattern: 'pkg/version/version.go'
+          branch: main
       -
         name: Set up Go
         uses: actions/setup-go@v5
