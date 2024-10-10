@@ -5,7 +5,7 @@ go 1.22.1
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/sirupsen/logrus v1.9.3
-	github.com/urfave/cli/v2 v2.27.3
+	github.com/urfave/cli/v2 v2.27.4
 	golang.org/x/term v0.22.0
 )
 
