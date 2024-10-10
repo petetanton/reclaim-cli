@@ -36,9 +36,6 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				title := c.String("title")
-				//if title == "" {
-				//	return errors.New("title is required")
-				//}
 				mins := input.AskSelect("how many mins for the task", []string{"15", "30", "45", "60", "75", "90", "105", "120"})
 				minsInt, err := strconv.Atoi(mins)
 				if err != nil {
