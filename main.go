@@ -96,6 +96,49 @@ func main() {
 			},
 		},
 		{
+			Name:        "dedupe",
+			Description: "Deduplicate tasks with the same name (usually tasks that were created via automation)",
+			Action: func(c *cli.Context) error {
+				tasks, err := client.GetTasks()
+				if err != nil {
+					return err
+				}
+
+				logrus.Printf("found %d tasks", len(tasks))
+
+				taskMap := make(map[string][]*reclaim.Task)
+				for _, task := range tasks {
+					if task.Status != "COMPLETE" && task.Status != "ARCHIVED" {
+						taskMap[task.Title] = append(taskMap[task.Title], task)
+					}
+				}
+
+				for title, dupeTasks := range taskMap {
+					if len(dupeTasks) > 1 {
+						logrus.Printf("deduping %d %s", dupeTasks[0].Id, title)
+						chunksRemaining := 0
+						for i := 1; i < len(dupeTasks); i++ {
+							chunksRemaining += dupeTasks[i].TimeChunksRemaining
+							err = client.DeleteTask(dupeTasks[i].Id)
+							if err != nil {
+								return err
+							}
+						}
+
+						mainTask := dupeTasks[0]
+						mainTask.TimeChunksRemaining += chunksRemaining
+						updatedTask, err := client.UpdateTask(mainTask)
+						if err != nil {
+							return err
+						}
+
+						logrus.Printf("task %s updated with %d chunks remaining", title, updatedTask.TimeChunksRemaining)
+					}
+				}
+				return nil
+			},
+		},
+		{
 			Name: "version",
 			Action: func(c *cli.Context) error {
 				logrus.Print(version.Version)
