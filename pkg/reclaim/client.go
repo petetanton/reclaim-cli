@@ -124,3 +124,55 @@ func (c *Client) GetTasks() ([]*Task, error) {
 
 	return tasks, nil
 }
+
+func (c *Client) DeleteTask(taskId int) error {
+	request, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/api/tasks/%d", apiUrl, taskId), nil)
+	if err != nil {
+		return err
+	}
+
+	response, err := c.do(request)
+	if err != nil {
+		return err
+	}
+
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code %d when deleting a task", response.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *Client) UpdateTask(task *Task) (*Task, error) {
+	requestBody, err := json.Marshal(task)
+	if err != nil {
+		return nil, err
+	}
+
+	request, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/tasks/%d", apiUrl, task.Id), strings.NewReader(string(requestBody)))
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := c.do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	var updatedTask *Task
+	reqBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(reqBytes, &updatedTask)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedTask, nil
+}
