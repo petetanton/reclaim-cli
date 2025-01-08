@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -53,7 +54,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				logrus.Printf("task %s created with id %d", title, task.Id)
+				logrus.Infof("task %s created with id %d", title, task.Id)
 
 				delay := input.AskSelect("when would you like to start this task", []string{NOW, IN_ONE_DAY, IN_TWO_DAYS, IN_ONE_WEEK})
 				if delay == IN_ONE_DAY {
@@ -80,7 +81,6 @@ func main() {
 				var snoozableItems []string
 				for _, task := range tasks {
 					if task.Status != "COMPLETE" && task.Status != "ARCHIVED" {
-						//logrus.Printf("[%s] %s", task.Status, task.Title)
 						snoozableItems = append(snoozableItems, fmt.Sprintf("%d, %s", task.Id, task.Title))
 					}
 				}
@@ -104,7 +104,7 @@ func main() {
 					return err
 				}
 
-				logrus.Printf("found %d tasks", len(tasks))
+				logrus.Infof("found %d tasks", len(tasks))
 
 				taskMap := make(map[string][]*reclaim.Task)
 				for _, task := range tasks {
@@ -113,28 +113,16 @@ func main() {
 					}
 				}
 
+				wg := sync.WaitGroup{}
 				for title, dupeTasks := range taskMap {
 					if len(dupeTasks) > 1 {
-						logrus.Printf("deduping %d %s", dupeTasks[0].Id, title)
-						chunksRemaining := 0
-						for i := 1; i < len(dupeTasks); i++ {
-							chunksRemaining += dupeTasks[i].TimeChunksRemaining
-							err = client.DeleteTask(dupeTasks[i].Id)
-							if err != nil {
-								return err
-							}
-						}
+						wg.Add(1)
 
-						mainTask := dupeTasks[0]
-						mainTask.TimeChunksRemaining += chunksRemaining
-						updatedTask, err := client.UpdateTask(mainTask)
-						if err != nil {
-							return err
-						}
-
-						logrus.Printf("task %s updated with %d chunks remaining", title, updatedTask.TimeChunksRemaining)
+						go dedupe(client, title, dupeTasks, &wg)
 					}
 				}
+
+				wg.Wait()
 				return nil
 			},
 		},
@@ -151,4 +139,31 @@ func main() {
 	if err != nil {
 		logrus.Fatal(err)
 	}
+}
+
+func dedupe(client *reclaim.Client, title string, dupeTasks []*reclaim.Task, wg *sync.WaitGroup) {
+	defer wg.Done()
+	logrus.Infof("deduping %d %s", dupeTasks[0].Id, title)
+	chunksRemaining := 0
+	chunksRequired := 0
+	for i := 1; i < len(dupeTasks); i++ {
+		chunksRemaining += dupeTasks[i].TimeChunksRemaining
+		chunksRequired += dupeTasks[i].TimeChunksRequired
+		err := client.DeleteTask(dupeTasks[i].Id)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+	}
+
+	mainTask := dupeTasks[0]
+	mainTask.TimeChunksRemaining += chunksRemaining
+	mainTask.TimeChunksRequired += chunksRequired
+	updatedTask, err := client.UpdateTask(mainTask)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+
+	logrus.Infof("task %s updated with %d chunks remaining", title, updatedTask.TimeChunksRemaining)
 }
