@@ -97,7 +97,7 @@ func (c *Client) SnoozeTask(taskId int, snoozeUntil time.Time) error {
 }
 
 func (c *Client) GetTasks() ([]*Task, error) {
-	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/tasks", apiUrl), nil)
+	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/tasks?status=NEW,SCHEDULED,IN_PROGRESS,COMPLETE", apiUrl), nil)
 	if err != nil {
 		return nil, err
 	}
