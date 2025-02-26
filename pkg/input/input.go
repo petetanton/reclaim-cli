@@ -43,6 +43,18 @@ func getAskOptions(options *survey.AskOptions) (err error) {
 	return
 }
 
+func AskString(question string) string {
+	response := ""
+	var prompt survey.Prompt
+	prompt = &survey.Input{Message: fmt.Sprintf("%s?", question)}
+	err := survey.AskOne(prompt, &response, getAskOptions)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	return response
+}
+
 func AskStringWithOptions(question, def string, options Config) (string, error) {
 	tries++
 
