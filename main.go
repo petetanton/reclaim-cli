@@ -53,7 +53,9 @@ func main() {
 
 				minChunkSize := minChunkInt / 15
 
-				task, err := client.CreateTask(title, minChunkSize, minChunkSize*8, minsInt/15)
+				priority := input.AskSelect("what is the priority of the task", []string{"P1", "P2", "P3", "P4"})
+
+				task, err := client.CreateTask(title, minChunkSize, minChunkSize*8, minsInt/15, reclaim.TaskPriority(priority))
 				if err != nil {
 					return err
 				}

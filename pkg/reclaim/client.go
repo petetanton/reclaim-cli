@@ -16,6 +16,15 @@ const (
 	apiUrl = "https://api.app.reclaim.ai"
 )
 
+type TaskPriority string
+
+const (
+	P1 TaskPriority = "P1"
+	P2 TaskPriority = "P2"
+	P3 TaskPriority = "P3"
+	P4 TaskPriority = "P4"
+)
+
 type Client struct {
 	h      http.Client
 	apiKey string
@@ -35,15 +44,16 @@ func (c *Client) do(req *http.Request) (*http.Response, error) {
 	return c.h.Do(req)
 }
 
-func (c *Client) CreateTask(title string, minChunkSize int, maxChunkSize int, timeChunksRequired int) (*Task, error) {
+func (c *Client) CreateTask(title string, minChunkSize int, maxChunkSize int, timeChunksRequired int, priority TaskPriority) (*Task, error) {
 	requestBody := fmt.Sprintf(`{
 		"title": "%s",
 		"status": "NEW",
 		"minChunkSize": %d,
 		"maxChunkSize": %d,
 		"timeChunksRequired": %d,
-		"eventCategory": "WORK"
-}`, title, minChunkSize, maxChunkSize, timeChunksRequired)
+		"eventCategory": "WORK",
+		"priority": "%s"
+}`, title, minChunkSize, maxChunkSize, timeChunksRequired, priority)
 	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/tasks", apiUrl), strings.NewReader(requestBody))
 
 	if err != nil {
