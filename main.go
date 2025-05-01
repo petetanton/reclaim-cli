@@ -330,7 +330,7 @@ func removeGitlabTaskIfClosed(client *reclaim.Client, task *reclaim.Task) error 
 		if err != nil {
 			return err
 		}
-		if mr.State == "merged" {
+		if mr.State == "merged" || mr.State == "closed" {
 			logrus.Infof("removing task: %s", task.Title)
 			return client.DeleteTask(task.Id)
 		}
