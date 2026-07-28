@@ -7,7 +7,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.7
-	github.com/urfave/cli/v3 v3.10.1
 	gitlab.com/gitlab-org/api/client-go v0.124.0
 	golang.org/x/term v0.29.0
 )
