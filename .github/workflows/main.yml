@@ -23,4 +23,8 @@ jobs:
           commit_message: Update go mod
           file_pattern: 'go.*'
       - name: Build
-        run: go build main.go
+        # ./... rather than main.go: package main is no longer a single file, and
+        # naming one file compiles only that file.
+        run: go build ./...
+      - name: Test
+        run: go test ./...

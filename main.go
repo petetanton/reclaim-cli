@@ -31,73 +31,78 @@ func main() {
 	app := cli.NewApp()
 	app.Commands = []*cli.Command{
 		{
-			Name: "create",
+			Name:        "create",
+			Description: "Create a task. Any parameter not given as a flag is prompted for interactively.",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:     "title",
 					Required: true,
 				},
+				&cli.StringFlag{
+					Name:  "notes",
+					Usage: "free-text notes on the task, a better home for links than the title",
+				},
+				&cli.IntFlag{
+					Name:  "mins",
+					Usage: "how long the task takes: " + strings.Join(asStrings(minsOptions), ", "),
+				},
+				&cli.IntFlag{
+					Name:  "min-chunk",
+					Usage: "shortest block the task may be split into: " + strings.Join(asStrings(minChunkOptions), ", "),
+				},
+				&cli.StringFlag{
+					Name:  "priority",
+					Usage: "one of " + strings.Join(priorityOptions, ", "),
+				},
+				&cli.StringFlag{
+					Name:  "start",
+					Usage: `when to start the task: "` + strings.Join(startOptions, `", "`) + `", "in <n> hours|days|weeks", a date (2006-01-02, from midnight) or an RFC3339 timestamp`,
+				},
+				&cli.StringFlag{
+					Name:  "due",
+					Usage: `when the task is due: "in <n> hours|days|weeks", a date (2006-01-02, due at 23:59) or an RFC3339 timestamp. Unset means no due date.`,
+				},
+				&cli.BoolFlag{
+					Name:  "json",
+					Usage: "write the created task to stdout as JSON",
+				},
+				&cli.BoolFlag{
+					Name:  "non-interactive",
+					Usage: "never prompt; fail if a required flag is missing. Implied when stdin is not a terminal.",
+				},
 			},
 			Action: func(c *cli.Context) error {
-				title := c.String("title")
-				mins := input.AskSelect("how many mins for the task", []string{"15", "30", "45", "60", "90", "120", "180", "240"})
-				minsInt, err := strconv.Atoi(mins)
-				if err != nil {
-					return err
-				}
-				minChunk := input.AskSelect("what is the min chunk length for the task", []string{"15", "30", "45", "60"})
-				minChunkInt, err := strconv.Atoi(minChunk)
-				if err != nil {
-					return err
-				}
-
-				minChunkSize := minChunkInt / 15
-
-				priority := input.AskSelect("what is the priority of the task", []string{"P1", "P2", "P3", "P4"})
-
-				task, err := client.CreateTask(title, minChunkSize, minChunkSize*8, minsInt/15, reclaim.TaskPriority(priority))
-				if err != nil {
-					return err
-				}
-				logrus.Infof("task %s created with id %d", title, task.Id)
-
-				delay := input.AskSelect("when would you like to start this task", []string{NOW, IN_ONE_DAY, IN_TWO_DAYS, IN_ONE_WEEK})
-				if delay == IN_ONE_DAY {
-					return client.SnoozeTask(task.Id, time.Now().Add(time.Hour*24))
-				}
-				if delay == IN_TWO_DAYS {
-					return client.SnoozeTask(task.Id, time.Now().Add(time.Hour*24*2))
-				}
-				if delay == IN_ONE_WEEK {
-					return client.SnoozeTask(task.Id, time.Now().Add(time.Hour*24*7))
-				}
-				return nil
+				return createTask(client, c)
 			},
 		},
 		{
 			Name:        "snooze",
 			Description: "Snooze a task so that it is scheduled at a later date",
+			Flags: []cli.Flag{
+				&cli.IntFlag{
+					Name:  "id",
+					Usage: "id of the task to snooze; skips the picker",
+				},
+				&cli.StringFlag{
+					Name:  "title",
+					Usage: "snooze the one open task whose title contains this text; skips the picker",
+				},
+				&cli.StringFlag{
+					Name:  "until",
+					Value: IN_ONE_DAY,
+					Usage: `when the task should next be scheduled: "` + strings.Join(startOptions, `", "`) + `", "in <n> hours|days|weeks", a date (2006-01-02) or an RFC3339 timestamp`,
+				},
+				&cli.BoolFlag{
+					Name:  "json",
+					Usage: "write the snoozed task to stdout as JSON",
+				},
+				&cli.BoolFlag{
+					Name:  "non-interactive",
+					Usage: "never prompt; fail if a required flag is missing. Implied when stdin is not a terminal.",
+				},
+			},
 			Action: func(c *cli.Context) error {
-				tasks, err := client.GetTasks([]string{})
-				if err != nil {
-					return err
-				}
-
-				var snoozableItems []string
-				for _, task := range tasks {
-					if task.Status != "COMPLETE" && task.Status != "ARCHIVED" {
-						snoozableItems = append(snoozableItems, fmt.Sprintf("%d, %s", task.Id, task.Title))
-					}
-				}
-
-				itemToSnooze := input.AskSelect("Which task would you like to snooze", snoozableItems)
-
-				idToSnooze, err := strconv.Atoi(strings.Split(itemToSnooze, ",")[0])
-				if err != nil {
-					return err
-				}
-
-				return client.SnoozeTask(idToSnooze, time.Now().Add(time.Hour*24))
+				return snoozeTask(client, c)
 			},
 		},
 		{
@@ -183,6 +188,7 @@ func main() {
 			Description: "Archive complete tasks",
 			Action: func(c *cli.Context) error {
 				noOfWorkers := 10
+				interactive := !c.Bool("non-interactive") && input.IsInteractive()
 				maxCount := c.Uint("max-count")
 				if maxCount == 0 {
 					maxCount = 10
@@ -218,7 +224,10 @@ func main() {
 					for _, task := range tasks {
 						if maxCount > 0 {
 							isOldTask := task.Finished.Before(time.Now().Add(time.Hour * 24 * time.Duration(autoArchiveAge) * -1))
-							if isOldTask || input.AskForConfirmation(fmt.Sprintf("Would you like to archive '%s': %v?", task.Title, task.Finished)) {
+							// Without a terminal there is nobody to answer the
+							// confirmation, so fall back to archiving purely on age
+							// rather than dying on the prompt.
+							if isOldTask || (interactive && input.AskForConfirmation(fmt.Sprintf("Would you like to archive '%s': %v?", task.Title, task.Finished))) {
 								logrus.Infof("Archiving task %d", task.Id)
 								taskToArchive <- task
 								if !isOldTask {
@@ -261,13 +270,18 @@ func main() {
 					Required: false,
 					Usage:    "no of days after which tasks should be auto archived",
 				},
+				&cli.BoolFlag{
+					Name:  "non-interactive",
+					Usage: "never prompt; archive only tasks older than --auto-archive-age. Implied when stdin is not a terminal.",
+				},
 			},
 		},
 		{
 			Name: "version",
 			Action: func(c *cli.Context) error {
-				logrus.Print(version.Version)
-				return nil
+				// stdout, not logrus: this is data a caller may want to read.
+				_, err := fmt.Fprintln(c.App.Writer, version.Version)
+				return err
 			},
 		},
 	}

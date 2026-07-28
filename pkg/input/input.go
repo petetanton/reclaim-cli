@@ -24,6 +24,15 @@ func isTerminal() bool {
 	return terminal.IsTerminal(int(os.Stdout.Fd()))
 }
 
+// IsInteractive reports whether prompts can actually be answered. survey needs a
+// real terminal to read from — piping answers on stdin does not work — so a
+// non-terminal stdin means callers must not prompt. Note this deliberately
+// checks stdin, unlike isTerminal above, which checks stdout to decide where
+// prompts are drawn.
+func IsInteractive() bool {
+	return terminal.IsTerminal(int(os.Stdin.Fd()))
+}
+
 func getAskOptions(options *survey.AskOptions) (err error) {
 	// use stdout if not piping
 	if isTerminal() {
