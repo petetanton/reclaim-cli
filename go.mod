@@ -5,14 +5,15 @@ go 1.23.1
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.10.0
-	github.com/urfave/cli/v2 v2.27.5
+	github.com/stretchr/testify v1.11.1
+	github.com/urfave/cli/v2 v2.27.7
+	github.com/urfave/cli/v3 v3.10.1
 	gitlab.com/gitlab-org/api/client-go v0.124.0
 	golang.org/x/term v0.29.0
 )
 
 require (
-	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
