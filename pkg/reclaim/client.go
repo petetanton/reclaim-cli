@@ -26,15 +26,19 @@ const (
 )
 
 type Client struct {
-	h      http.Client
-	apiKey string
+	h http.Client
+	// baseUrl is a field rather than the apiUrl constant so tests can point the
+	// client at a stub server.
+	baseUrl string
+	apiKey  string
 }
 
 func New() *Client {
 	return &Client{h: http.Client{
 		Timeout: time.Second * 10,
 	},
-		apiKey: os.Getenv("RECLAIM_API_KEY")}
+		baseUrl: apiUrl,
+		apiKey:  os.Getenv("RECLAIM_API_KEY")}
 }
 
 func (c *Client) do(req *http.Request) (*http.Response, error) {
@@ -44,18 +48,20 @@ func (c *Client) do(req *http.Request) (*http.Response, error) {
 	return c.h.Do(req)
 }
 
-func (c *Client) CreateTask(title string, minChunkSize int, maxChunkSize int, timeChunksRequired int, priority TaskPriority) (*Task, error) {
-	requestBody := fmt.Sprintf(`{
-		"title": "%s",
-		"status": "NEW",
-		"minChunkSize": %d,
-		"maxChunkSize": %d,
-		"timeChunksRequired": %d,
-		"eventCategory": "WORK",
-		"priority": "%s"
-}`, title, minChunkSize, maxChunkSize, timeChunksRequired, priority)
-	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/tasks", apiUrl), strings.NewReader(requestBody))
+func (c *Client) CreateTask(task *CreateTaskRequest) (*Task, error) {
+	if task.Status == "" {
+		task.Status = "NEW"
+	}
+	if task.EventCategory == "" {
+		task.EventCategory = "WORK"
+	}
 
+	requestBody, err := json.Marshal(task)
+	if err != nil {
+		return nil, err
+	}
+
+	request, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/tasks", c.baseUrl), strings.NewReader(string(requestBody)))
 	if err != nil {
 		return nil, err
 	}
@@ -66,53 +72,62 @@ func (c *Client) CreateTask(title string, minChunkSize int, maxChunkSize int, ti
 	}
 
 	defer response.Body.Close()
+	responseBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code %d when creating a task:\n%s", response.StatusCode, requestBody)
+		return nil, fmt.Errorf("unexpected status code %d when creating a task:\nrequest: %s\nresponse: %s", response.StatusCode, requestBody, responseBytes)
 	}
 
-	var task *Task
-	reqBytes, err := io.ReadAll(response.Body)
-	if err != nil {
+	var createdTask *Task
+	if err := json.Unmarshal(responseBytes, &createdTask); err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(reqBytes, &task)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return task, nil
+	return createdTask, nil
 }
 
-func (c *Client) SnoozeTask(taskId int, snoozeUntil time.Time) error {
-	requestBody := fmt.Sprintf(`{
-		"snoozeUntil": "%s"
-}`, snoozeUntil.Format(time.RFC3339Nano))
-	request, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/api/tasks/%d", apiUrl, taskId), strings.NewReader(requestBody))
-
+func (c *Client) SnoozeTask(taskId int, snoozeUntil time.Time) (*Task, error) {
+	requestBody, err := json.Marshal(&snoozeTaskRequest{SnoozeUntil: snoozeUntil})
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	request, err := http.NewRequest(http.MethodPatch, fmt.Sprintf("%s/api/tasks/%d", c.baseUrl, taskId), strings.NewReader(string(requestBody)))
+	if err != nil {
+		return nil, err
 	}
 
 	response, err := c.do(request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code %d when snoozing a task:\n%s", response.StatusCode, requestBody)
+	responseBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code %d when snoozing a task:\nrequest: %s\nresponse: %s", response.StatusCode, requestBody, responseBytes)
+	}
+
+	var snoozedTask *Task
+	if err := json.Unmarshal(responseBytes, &snoozedTask); err != nil {
+		return nil, err
+	}
+
+	return snoozedTask, nil
 }
 
 func (c *Client) GetTasks(statuses []string) ([]*Task, error) {
 	if len(statuses) == 0 {
 		statuses = []string{"NEW", "SCHEDULED", "IN_PROGRESS", "COMPLETE"}
 	}
-	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/tasks?status=%s", apiUrl, strings.Join(statuses, ",")), nil)
+	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/tasks?status=%s", c.baseUrl, strings.Join(statuses, ",")), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +156,7 @@ func (c *Client) GetTasks(statuses []string) ([]*Task, error) {
 }
 
 func (c *Client) DeleteTask(taskId int) error {
-	request, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/api/tasks/%d", apiUrl, taskId), nil)
+	request, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/api/tasks/%d", c.baseUrl, taskId), nil)
 	if err != nil {
 		return err
 	}
@@ -165,7 +180,7 @@ func (c *Client) UpdateTask(task *Task) (*Task, error) {
 		return nil, err
 	}
 
-	request, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/tasks/%d", apiUrl, task.Id), strings.NewReader(string(requestBody)))
+	request, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/tasks/%d", c.baseUrl, task.Id), strings.NewReader(string(requestBody)))
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +209,7 @@ func (c *Client) UpdateTask(task *Task) (*Task, error) {
 
 func (c *Client) GetNextMeetingTime(linkId string) (*MeetingTime, error) {
 	now := time.Now()
-	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/scheduling-link/%s/meeting/availability/V2?date=%s&zoneId=Europe/London&conferenceType=ZOOM", apiUrl, linkId, now.Format("2006-01-02")), nil)
+	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/scheduling-link/%s/meeting/availability/V2?date=%s&zoneId=Europe/London&conferenceType=ZOOM", c.baseUrl, linkId, now.Format("2006-01-02")), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +239,7 @@ func (c *Client) GetNextMeetingTime(linkId string) (*MeetingTime, error) {
 }
 
 func (c *Client) GetScheduleLinks() ([]*ScheduleLink, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/scheduling-link", apiUrl), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/api/scheduling-link", c.baseUrl), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +287,7 @@ func (c *Client) CreateMeeting(inviteeName string, inviteeEmail string, title st
 
 	logrus.Info(string(requestBody))
 
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/scheduling-link/%s/meeting", apiUrl, linkId), strings.NewReader(string(requestBody)))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/scheduling-link/%s/meeting", c.baseUrl, linkId), strings.NewReader(string(requestBody)))
 	if err != nil {
 		return nil, err
 	}

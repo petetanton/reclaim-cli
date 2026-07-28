@@ -17,23 +17,47 @@ type Task struct {
 	AlwaysPrivate       bool    `json:"alwaysPrivate"`
 	Deleted             bool    `json:"deleted"`
 	Index               float64 `json:"index"`
-	//Due                 time.Time `json:"due"`  // this field is a strange format e.g. 0000-12-31T23:58:45-00:01:15
-	Created      time.Time `json:"created"`
-	Updated      time.Time `json:"updated"`
-	Finished     time.Time `json:"finished"`
-	Adjusted     bool      `json:"adjusted"`
-	AtRisk       bool      `json:"atRisk"`
-	TimeSchemeId string    `json:"timeSchemeId"`
-	Priority     string    `json:"priority"`
-	OnDeck       bool      `json:"onDeck"`
-	Deferred     bool      `json:"deferred"`
-	SortKey      float64   `json:"sortKey"`
+	// Due and SnoozeUntil are absent on most tasks, so they are pointers: a nil
+	// value is omitted on write rather than sent as the zero time, which the API
+	// rejects.
+	Due          *time.Time `json:"due,omitempty"`
+	SnoozeUntil  *time.Time `json:"snoozeUntil,omitempty"`
+	Created      time.Time  `json:"created"`
+	Updated      time.Time  `json:"updated"`
+	Finished     time.Time  `json:"finished"`
+	Adjusted     bool       `json:"adjusted"`
+	AtRisk       bool       `json:"atRisk"`
+	TimeSchemeId string     `json:"timeSchemeId"`
+	Priority     string     `json:"priority"`
+	OnDeck       bool       `json:"onDeck"`
+	Deferred     bool       `json:"deferred"`
+	SortKey      float64    `json:"sortKey"`
 	TaskSource   struct {
 		Type string `json:"type"`
 	} `json:"taskSource"`
 	ReadOnlyFields          []interface{} `json:"readOnlyFields"`
 	RecurringAssignmentType string        `json:"recurringAssignmentType"`
 	Type                    string        `json:"type"`
+}
+
+// CreateTaskRequest is the body of POST /api/tasks. It exists so request bodies
+// are built with json.Marshal rather than string interpolation, which produced
+// malformed JSON for any title containing a quote, backslash or newline.
+type CreateTaskRequest struct {
+	Title              string       `json:"title"`
+	Notes              string       `json:"notes,omitempty"`
+	Status             string       `json:"status"`
+	MinChunkSize       int          `json:"minChunkSize"`
+	MaxChunkSize       int          `json:"maxChunkSize"`
+	TimeChunksRequired int          `json:"timeChunksRequired"`
+	EventCategory      string       `json:"eventCategory"`
+	Priority           TaskPriority `json:"priority"`
+	Due                *time.Time   `json:"due,omitempty"`
+}
+
+// snoozeTaskRequest is the body of PATCH /api/tasks/{id}.
+type snoozeTaskRequest struct {
+	SnoozeUntil time.Time `json:"snoozeUntil"`
 }
 
 type MeetingResponse struct {
