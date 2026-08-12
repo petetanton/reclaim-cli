@@ -8,7 +8,6 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.5
 	gitlab.com/gitlab-org/api/client-go v1.46.0
-	gitlab.com/gitlab-org/api/client-go/v2 v2.57.0
 	golang.org/x/term v0.29.0
 )
 
